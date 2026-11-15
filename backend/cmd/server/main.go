@@ -14,6 +14,7 @@ import (
 	"github.com/authguard/backend/internal/cache"
 	"github.com/authguard/backend/internal/config"
 	"github.com/authguard/backend/internal/database"
+	"github.com/authguard/backend/internal/gold"
 	"github.com/authguard/backend/internal/httpapi"
 	"github.com/authguard/backend/internal/mail"
 	"github.com/authguard/backend/internal/security"
@@ -73,7 +74,7 @@ func run(log *slog.Logger) error {
 	}
 	go auth.RunJanitor(ctx)
 
-	router, err := httpapi.NewRouter(httpapi.Deps{Config: cfg, Log: log, Auth: auth, DB: pool, Redis: rdb, Weather: weather.New(rdb)})
+	router, err := httpapi.NewRouter(httpapi.Deps{Config: cfg, Log: log, Auth: auth, DB: pool, Redis: rdb, Weather: weather.New(rdb), Gold: gold.New(rdb, log)})
 	if err != nil {
 		return err
 	}

@@ -29,6 +29,7 @@
     --ring: 240 5.9% 10%;
     --radius: 0.625rem;
     --glow: 240 5% 64%;
+    --chart-gold: #b45309;
   }
 
   .dark {
@@ -56,6 +57,7 @@
     --input: 240 3.7% 17%;
     --ring: 240 4.9% 83.9%;
     --glow: 240 5% 40%;
+    --chart-gold: #d97706;
   }
 
   * {
@@ -85,6 +87,18 @@
 }
 
 @layer utilities {
+  /* Draws an SVG line in once on mount (needs pathLength="1"). */
+  .chart-draw {
+    stroke-dasharray: 1;
+    animation: chart-draw 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  @keyframes chart-draw {
+    from { stroke-dashoffset: 1; }
+    to { stroke-dashoffset: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .chart-draw { animation: none; }
+  }
   .bg-grid {
     background-image:
       linear-gradient(to right, hsl(var(--border) / 0.7) 1px, transparent 1px),

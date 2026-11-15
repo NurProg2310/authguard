@@ -84,6 +84,8 @@ POST /api/auth/takeover ─▶ same transaction, but: revoke old row (reason=sup
 | GET | `/api/sessions` | bearer | The 15 most recent sessions, with revoke reasons |
 | GET | `/api/weather?lat=&lon=` | bearer | Current weather and a 5-day forecast from Open-Meteo, cached in Redis for 10 minutes |
 | GET | `/api/weather/search?q=&lang=` | bearer | City search through Open-Meteo geocoding, cached for 24 hours |
+| GET | `/api/gold` | bearer | Gold prices from the National Bank of Kazakhstan, spot XAU/USD, COMEX, Shanghai Gold Exchange and Moscow Exchange, converted to ₸/g and $/oz at NBK rates. Cached for 5 minutes. |
+| GET | `/api/gold/history` | bearer | About one year of NBK official ₸/g prices for the dashboard chart. Cached for 3 hours. |
 | GET | `/api/health` | none | Checks PostgreSQL and Redis |
 
 Errors use the shape `{"error":{"code":"…","message":"…", …}}`. A `401 SESSION_REVOKED` response also includes `reason`, which is one of `superseded`, `password_reset`, `token_reuse`, `expired` or `signed_out`.

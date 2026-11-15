@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { DeviceIcon } from "@/components/device-icon";
 import { AppHeader } from "@/components/app-header";
 import { WeatherCard } from "@/components/weather-card";
+import { GoldCard } from "@/components/gold-card";
 
 const container: Variants = { hidden: {}, show: { transition: { staggerChildren: 0.06 } } };
 const item: Variants = {
@@ -113,6 +114,10 @@ export default function DashboardPage() {
 
         <motion.div variants={item} className="mt-6">
           <WeatherCard />
+        </motion.div>
+
+        <motion.div variants={item} className="mt-6">
+          <GoldCard />
         </motion.div>
 
         <div className="mt-6 grid gap-6 lg:grid-cols-5">

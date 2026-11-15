@@ -11,6 +11,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/authguard/backend/internal/config"
+	"github.com/authguard/backend/internal/gold"
 	"github.com/authguard/backend/internal/service"
 	"github.com/authguard/backend/internal/weather"
 )
@@ -22,6 +23,7 @@ type Deps struct {
 	DB      *pgxpool.Pool
 	Redis   *redis.Client
 	Weather *weather.Client
+	Gold    *gold.Client
 }
 
 type handlers struct{ Deps }
@@ -56,6 +58,8 @@ func NewRouter(d Deps) (*gin.Engine, error) {
 	authed.GET("/sessions/current", h.currentSession)
 	authed.GET("/weather", h.rateLimit("weather", 60, time.Minute), h.weatherForecast)
 	authed.GET("/weather/search", h.rateLimit("weather-search", 60, time.Minute), h.weatherSearch)
+	authed.GET("/gold", h.rateLimit("gold", 30, time.Minute), h.goldPrices)
+	authed.GET("/gold/history", h.rateLimit("gold-history", 30, time.Minute), h.goldHistory)
 
 	return r, nil
 }

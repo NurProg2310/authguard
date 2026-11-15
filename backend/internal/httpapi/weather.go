@@ -53,3 +53,23 @@ func (h *handlers) weatherError(c *gin.Context, err error) {
 	}
 	h.internal(c, err)
 }
+
+func (h *handlers) goldPrices(c *gin.Context) {
+	r, err := h.Gold.Report(c.Request.Context())
+	if err != nil {
+		h.Log.Warn("gold prices", "error", err)
+		fail(c, http.StatusBadGateway, "GOLD_UNAVAILABLE", "Gold prices are temporarily unavailable")
+		return
+	}
+	c.JSON(http.StatusOK, r)
+}
+
+func (h *handlers) goldHistory(c *gin.Context) {
+	r, err := h.Gold.History(c.Request.Context())
+	if err != nil {
+		h.Log.Warn("gold history", "error", err)
+		fail(c, http.StatusBadGateway, "GOLD_UNAVAILABLE", "Gold price history is temporarily unavailable")
+		return
+	}
+	c.JSON(http.StatusOK, r)
+}

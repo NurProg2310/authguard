@@ -243,3 +243,41 @@ export const weatherApi = {
   search: (q: string, lang: string) =>
     request<{ places: Place[] }>(`/weather/search?q=${encodeURIComponent(q)}&lang=${encodeURIComponent(lang)}`),
 };
+
+export interface GoldQuote {
+  id: string;
+  name: string;
+  venue: string;
+  country: string;
+  available: boolean;
+  price?: number;
+  currency: string;
+  unit: "oz" | "g";
+  change_pct?: number;
+  kzt_per_gram?: number;
+  usd_per_oz?: number;
+  as_of?: string;
+  source_url: string;
+}
+
+export interface GoldReport {
+  updated_at: string;
+  fx: Record<string, number>;
+  fx_date: string;
+  quotes: GoldQuote[];
+}
+
+export const goldApi = {
+  report: () => request<GoldReport>("/gold"),
+};
+
+export interface GoldHistory {
+  series: string;
+  unit: string;
+  points: { date: string; value: number }[];
+  updated_at: string;
+}
+
+export const goldHistoryApi = {
+  get: () => request<GoldHistory>("/gold/history"),
+};
