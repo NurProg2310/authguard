@@ -4,6 +4,8 @@ package config
 import (
 	"errors"
 	"fmt"
+	"net"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -107,10 +109,22 @@ func Load() (*Config, error) {
 	if c.AccessTTL > c.RefreshTTL {
 		return nil, errors.New("ACCESS_TOKEN_TTL must not exceed REFRESH_TOKEN_TTL")
 	}
-	if c.IsProduction() && !c.CookieSecure && !strings.HasPrefix(c.AppURL, "http://localhost") {
+	u, err := url.Parse(c.AppURL)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Hostname() == "" {
+		return nil, fmt.Errorf("APP_URL must be an absolute http(s) URL, got %q", c.AppURL)
+	}
+	if c.IsProduction() && !c.CookieSecure && !isLoopback(u.Hostname()) {
 		return nil, errors.New("COOKIE_SECURE must be true in production for non-localhost APP_URL")
 	}
 	return c, nil
+}
+
+func isLoopback(host string) bool {
+	if host == "localhost" {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }
 
 func get(key, def string) string {

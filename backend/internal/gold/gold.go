@@ -62,10 +62,11 @@ type Report struct {
 }
 
 type Client struct {
-	http  *http.Client
-	redis *redis.Client
-	log   *slog.Logger
-	mu    sync.Mutex // collapses concurrent cache misses into one upstream fetch
+	http   *http.Client
+	redis  *redis.Client
+	log    *slog.Logger
+	mu     sync.Mutex // collapses concurrent Report cache misses into one upstream fetch
+	histMu sync.Mutex // same for History; separate so a slow history fetch never blocks prices
 }
 
 func New(rdb *redis.Client, log *slog.Logger) *Client {
@@ -441,8 +442,14 @@ func (c *Client) History(ctx context.Context) (*History, error) {
 			return &h, nil
 		}
 	}
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	c.histMu.Lock()
+	defer c.histMu.Unlock()
+	if b, err := c.redis.Get(ctx, historyKey).Bytes(); err == nil {
+		var h History
+		if json.Unmarshal(b, &h) == nil {
+			return &h, nil
+		}
+	}
 
 	cutoff := time.Now().In(almaty).AddDate(0, 0, -historyDays).Format("2006-01-02")
 	pages := make([][]Point, historyMaxPage)

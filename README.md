@@ -37,7 +37,7 @@ POST /api/auth/takeover ─▶ same transaction, but: revoke old row (reason=sup
 ```
 
 - **Enforced in the database.** The partial unique index `sessions_one_active_per_user ON sessions(user_id) WHERE revoked_at IS NULL` means no code path can leave two live sessions for one user. The row lock on the user serialises logins, so the index is a backstop and is not expected to trip.
-- **Revocation takes effect immediately.** Every access token (a JWT, 15-minute lifetime) carries a `sid` claim. The auth middleware accepts a token only while `ag:session:<sid>` exists in Redis. Deleting that key cuts off every outstanding token at once. On a Redis miss, the middleware checks PostgreSQL and re-populates the key. If Redis restarts, nobody is locked out and no revoked session gets back in.
+- **Revocation takes effect immediately.** Every access token (a JWT, 15-minute lifetime) carries a `sid` claim. The auth middleware accepts a token only while `ag:session:<sid>` exists in Redis. Deleting that key cuts off every outstanding token at once. On a Redis miss, the middleware checks PostgreSQL and re-populates the key. Keys live for at most 60 seconds, so even a lost `DEL` (for example during a Redis failover) can keep a revoked session alive for no more than a minute. If Redis restarts, nobody is locked out and no revoked session gets back in.
 - **Logged-out devices find out within seconds.** The old device runs a heartbeat every 15 seconds and also checks when its window regains focus. When the check fails, it goes to `/login` with the message "signed in on another device".
 - **Takeover without a second password prompt.** The 409 response includes a short-lived JWT of type `takeover`, bound to the user and used once (Redis `SETNX`). A password reset after the token was issued invalidates it.
 
@@ -56,7 +56,8 @@ POST /api/auth/takeover ─▶ same transaction, but: revoke old row (reason=sup
 
 - Passwords are hashed with Argon2id (m=19 MiB, t=2, p=1, the OWASP baseline). A semaphore caps how many hashes run at once. Logins for unknown emails hash a dummy password so response time doesn't reveal whether an account exists.
 - Rate limits are applied in two layers:
-  - Redis fixed windows per IP on every auth route, plus per email for login and forgot-password.
+  - Redis fixed windows per IP on every auth route, plus per email for forgot-password.
+  - For login, only *failed* attempts are counted: 10 per email + IP and 50 per email in 15 minutes. Spamming wrong passwords from one address therefore can't lock the real owner out.
   - Nginx `limit_req` as an outer layer.
 - Password reset:
   - Tokens are single-use, 256-bit, stored only as hashes, and expire after 30 minutes.

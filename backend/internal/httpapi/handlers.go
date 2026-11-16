@@ -93,13 +93,29 @@ func (h *handlers) login(c *gin.Context) {
 		fail(c, http.StatusUnauthorized, "INVALID_CREDENTIALS", "Invalid email or password")
 		return
 	}
-	// Per-account limit slows credential stuffing spread across many IPs.
-	if ok, retry := h.allow(c, "login-email:"+req.Email, 10, 15*time.Minute); !ok {
-		tooMany(c, retry)
-		return
+	// Only *failed* attempts count, so an attacker can't lock a user out by
+	// spamming their email: the tight limit is per (email, IP); the per-email
+	// ceiling is high and only slows guessing distributed across many IPs.
+	failKeys := []struct {
+		key   string
+		limit int
+	}{
+		{"login-fail:" + req.Email + "|" + c.ClientIP(), 10},
+		{"login-fail:" + req.Email, 50},
+	}
+	for _, f := range failKeys {
+		if over, retry := h.overLimit(c, f.key, f.limit); over {
+			tooMany(c, retry)
+			return
+		}
 	}
 	res, err := h.Auth.Login(c.Request.Context(), req.Email, req.Password, meta(c))
 	if err != nil {
+		if errors.Is(err, service.ErrInvalidCredentials) {
+			for _, f := range failKeys {
+				h.recordHit(c, f.key, 15*time.Minute)
+			}
+		}
 		h.authError(c, err)
 		return
 	}

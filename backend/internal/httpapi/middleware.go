@@ -158,6 +158,30 @@ func (h *handlers) allow(c *gin.Context, key string, limit int, window time.Dura
 	return incr.Val() <= int64(limit), ttl.Val()
 }
 
+// overLimit reports whether key has already reached limit, without counting
+// this request. Pair with recordHit to count only some outcomes (e.g. failures).
+func (h *handlers) overLimit(c *gin.Context, key string, limit int) (bool, time.Duration) {
+	ctx := c.Request.Context()
+	k := "ag:rl:" + key
+	n, err := h.Redis.Get(ctx, k).Int64()
+	if err != nil || n < int64(limit) {
+		return false, 0 // redis.Nil, or Redis down (fail open, as allow does)
+	}
+	ttl, _ := h.Redis.TTL(ctx, k).Result()
+	return true, ttl
+}
+
+func (h *handlers) recordHit(c *gin.Context, key string, window time.Duration) {
+	ctx := c.Request.Context()
+	k := "ag:rl:" + key
+	pipe := h.Redis.TxPipeline()
+	pipe.Incr(ctx, k)
+	pipe.ExpireNX(ctx, k, window)
+	if _, err := pipe.Exec(ctx); err != nil {
+		h.Log.Warn("rate limiter unavailable", "error", err)
+	}
+}
+
 func tooMany(c *gin.Context, retry time.Duration) {
 	secs := int(retry.Seconds())
 	if secs < 1 {

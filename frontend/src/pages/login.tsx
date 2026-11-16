@@ -24,7 +24,9 @@ export default function LoginPage() {
   const { login, takeover, notice, clearNotice } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const from = (location.state as { from?: string } | null)?.from ?? "/dashboard";
+  // Only same-app paths: never "//host", "/\\host" or absolute URLs.
+  const requested = (location.state as { from?: string } | null)?.from;
+  const from = requested && /^\/(?![\/\\])/.test(requested) ? requested : "/dashboard";
 
   const [formError, setFormError] = useState<string | null>(null);
   const [conflict, setConflict] = useState<SessionConflict | null>(null);

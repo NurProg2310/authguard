@@ -34,8 +34,13 @@ services:
       - ${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}
       - --appendonly
       - "yes"
+      # Bounded memory. Only keys with a TTL are evicted (all of ours have one).
+      # Evicted session keys fall back to PostgreSQL; evicting rate-limit
+      # counters or takeover markers only weakens limits under memory pressure.
+      - --maxmemory
+      - 256mb
       - --maxmemory-policy
-      - noeviction
+      - volatile-lru
     environment:
       REDISCLI_AUTH: ${REDIS_PASSWORD}
     volumes:

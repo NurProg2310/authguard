@@ -506,8 +506,13 @@ func (a *Auth) ValidateSession(ctx context.Context, sessionID, userID uuid.UUID)
 
 func sessionKey(id uuid.UUID) string { return "ag:session:" + id.String() }
 
+// sessionCacheTTL bounds how long Redis may vouch for a session without
+// PostgreSQL re-confirming it. Revocation normally deletes the key at once;
+// this cap limits the damage if that DEL is ever lost (Redis blip, failover).
+const sessionCacheTTL = time.Minute
+
 func (a *Auth) cacheSession(ctx context.Context, sessionID, userID uuid.UUID, exp time.Time) {
-	ttl := time.Until(exp)
+	ttl := min(time.Until(exp), sessionCacheTTL)
 	if ttl <= 0 {
 		return
 	}
@@ -521,9 +526,8 @@ func (a *Auth) dropSessionCache(ctx context.Context, sessionID uuid.UUID) {
 	c, cancel := context.WithTimeout(context.WithoutCancel(ctx), 2*time.Second)
 	defer cancel()
 	if err := a.Redis.Del(c, sessionKey(sessionID)).Err(); err != nil {
-		// Safe: ValidateSession falls back to postgres only on a cache miss, and a
-		// stale positive entry can only remain if Redis is unreachable, in which
-		// case reads also fail and fall through to postgres.
+		// A stale positive entry can survive at most sessionCacheTTL, after
+		// which ValidateSession re-checks postgres and sees the revocation.
 		a.Log.Error("drop session cache failed", "session_id", sessionID, "error", err)
 	}
 }

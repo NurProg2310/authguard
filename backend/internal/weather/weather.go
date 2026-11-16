@@ -20,7 +20,7 @@ const (
 	forecastURL  = "https://api.open-meteo.com/v1/forecast"
 	geocodingURL = "https://geocoding-api.open-meteo.com/v1/search"
 	forecastTTL  = 10 * time.Minute
-	searchTTL    = 24 * time.Hour
+	searchTTL    = 6 * time.Hour
 )
 
 var ErrUpstream = errors.New("weather provider unavailable")
